@@ -1,22 +1,276 @@
-# Install Node.js from nodejs.org if not installed
-# Create project folder
-mkdir society-voting-system
-cd society-voting-system
+import React, { useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-# Initialize project
-npm create vite@latest . -- --template react
-npm install
+const VotingApp = () => {
+  // Mock data - in a real app this would come from a database
+  const [positions] = useState([
+    'Society President',
+    'Secretary',
+    'Treasurer'
+  ]);
 
-# Install required dependencies
-npm install @supabase/supabase-js
-npm install -D tailwindcss postcss autoprefixer
-npm install @radix-ui/react-tabs
-npm install @radix-ui/react-alert-dialog
-npm install lucide-react
+  const [candidates, setCandidates] = useState([
+    { id: 1, name: 'John Doe', position: 'Society President', votes: 0 },
+    { id: 2, name: 'Jane Smith', position: 'Society President', votes: 0 },
+    { id: 3, name: 'Mike Johnson', position: 'Secretary', votes: 0 },
+    { id: 4, name: 'Sarah Wilson', position: 'Secretary', votes: 0 },
+    { id: 5, name: 'Robert Brown', position: 'Treasurer', votes: 0 }
+  ]);
 
-# Initialize Git and push to GitHub
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin YOUR_GITHUB_REPO_URL
-git push -u origin main
+  const [voters, setVoters] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [newCandidate, setNewCandidate] = useState({ name: '', position: 'Society President' });
+  const [voterRegistration, setVoterRegistration] = useState({ email: '', apartmentNo: '' });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Register new voter
+  const handleRegisterVoter = () => {
+    if (!voterRegistration.email || !voterRegistration.apartmentNo) {
+      setError('Please fill in all fields');
+      return;
+    }
+    
+    if (voters.find(v => v.email === voterRegistration.email)) {
+      setError('This email is already registered');
+      return;
+    }
+
+    if (voters.find(v => v.apartmentNo === voterRegistration.apartmentNo)) {
+      setError('This apartment is already registered');
+      return;
+    }
+
+    setVoters([...voters, { ...voterRegistration, hasVoted: false }]);
+    setVoterRegistration({ email: '', apartmentNo: '' });
+    setSuccess('Voter registered successfully!');
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  // Add new candidate
+  const handleAddCandidate = () => {
+    if (!newCandidate.name) {
+      setError('Please enter candidate name');
+      return;
+    }
+
+    setCandidates([
+      ...candidates,
+      {
+        id: candidates.length + 1,
+        ...newCandidate,
+        votes: 0
+      }
+    ]);
+    setNewCandidate({ name: '', position: 'Society President' });
+    setSuccess('Candidate added successfully!');
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  // Login voter
+  const handleLogin = () => {
+    const voter = voters.find(v => v.email === voterRegistration.email);
+    if (!voter) {
+      setError('Voter not found. Please register first.');
+      return;
+    }
+    if (voter.hasVoted) {
+      setError('You have already cast your vote.');
+      return;
+    }
+    setCurrentUser(voter);
+    setError('');
+  };
+
+  // Cast vote
+  const handleVote = (candidateId) => {
+    if (!currentUser) {
+      setError('Please login first');
+      return;
+    }
+
+    const voter = voters.find(v => v.email === currentUser.email);
+    if (voter.hasVoted) {
+      setError('You have already cast your vote');
+      return;
+    }
+
+    setCandidates(candidates.map(c => 
+      c.id === candidateId ? { ...c, votes: c.votes + 1 } : c
+    ));
+
+    setVoters(voters.map(v =>
+      v.email === currentUser.email ? { ...v, hasVoted: true } : v
+    ));
+
+    setCurrentUser({ ...currentUser, hasVoted: true });
+    setSuccess('Vote cast successfully!');
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-4 space-y-4">
+      <h1 className="text-2xl font-bold mb-4">Society Voting System</h1>
+
+      <Tabs defaultValue="register">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="register">Register</TabsTrigger>
+          <TabsTrigger value="vote">Vote</TabsTrigger>
+          <TabsTrigger value="candidates">Manage Candidates</TabsTrigger>
+          <TabsTrigger value="results">Results</TabsTrigger>
+        </TabsList>
+
+        {/* Registration Tab */}
+        <TabsContent value="register">
+          <Card>
+            <CardHeader>
+              <CardTitle>Voter Registration</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                placeholder="Email"
+                value={voterRegistration.email}
+                onChange={(e) => setVoterRegistration({
+                  ...voterRegistration,
+                  email: e.target.value
+                })}
+              />
+              <Input
+                placeholder="Apartment Number"
+                value={voterRegistration.apartmentNo}
+                onChange={(e) => setVoterRegistration({
+                  ...voterRegistration,
+                  apartmentNo: e.target.value
+                })}
+              />
+              <Button onClick={handleRegisterVoter}>Register</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Voting Tab */}
+        <TabsContent value="vote">
+          <Card>
+            <CardHeader>
+              <CardTitle>Cast Your Vote</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!currentUser ? (
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Enter registered email"
+                    value={voterRegistration.email}
+                    onChange={(e) => setVoterRegistration({
+                      ...voterRegistration,
+                      email: e.target.value
+                    })}
+                  />
+                  <Button onClick={handleLogin}>Login</Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {positions.map(position => (
+                    <div key={position} className="space-y-2">
+                      <h3 className="font-medium">{position}</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        {candidates
+                          .filter(c => c.position === position)
+                          .map(candidate => (
+                            <Button
+                              key={candidate.id}
+                              onClick={() => handleVote(candidate.id)}
+                              disabled={currentUser.hasVoted}
+                              variant={currentUser.hasVoted ? "secondary" : "default"}
+                            >
+                              {candidate.name}
+                            </Button>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Manage Candidates Tab */}
+        <TabsContent value="candidates">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add New Candidate</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                placeholder="Candidate Name"
+                value={newCandidate.name}
+                onChange={(e) => setNewCandidate({
+                  ...newCandidate,
+                  name: e.target.value
+                })}
+              />
+              <select
+                className="w-full p-2 border rounded"
+                value={newCandidate.position}
+                onChange={(e) => setNewCandidate({
+                  ...newCandidate,
+                  position: e.target.value
+                })}
+              >
+                {positions.map(position => (
+                  <option key={position} value={position}>
+                    {position}
+                  </option>
+                ))}
+              </select>
+              <Button onClick={handleAddCandidate}>Add Candidate</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Results Tab */}
+        <TabsContent value="results">
+          <Card>
+            <CardHeader>
+              <CardTitle>Election Results</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {positions.map(position => (
+                <div key={position} className="mb-6">
+                  <h3 className="font-medium mb-2">{position}</h3>
+                  {candidates
+                    .filter(c => c.position === position)
+                    .sort((a, b) => b.votes - a.votes)
+                    .map(candidate => (
+                      <div key={candidate.id} className="flex justify-between items-center mb-2">
+                        <span>{candidate.name}</span>
+                        <span className="font-medium">{candidate.votes} votes</span>
+                      </div>
+                    ))}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
+      {success && (
+        <Alert>
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+};
+
+export default VotingApp;
