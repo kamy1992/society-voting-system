@@ -1,0 +1,22 @@
+# Install Node.js from nodejs.org if not installed
+# Create project folder
+mkdir society-voting-system
+cd society-voting-system
+
+# Initialize project
+npm create vite@latest . -- --template react
+npm install
+
+# Install required dependencies
+npm install @supabase/supabase-js
+npm install -D tailwindcss postcss autoprefixer
+npm install @radix-ui/react-tabs
+npm install @radix-ui/react-alert-dialog
+npm install lucide-react
+
+# Initialize Git and push to GitHub
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin YOUR_GITHUB_REPO_URL
+git push -u origin main
